@@ -1,7 +1,7 @@
 import express from 'express'
 const app = express();
 import 'dotenv/config'
-import {connectRedis} from './utils/redis.js'
+import {connectRedis} from './redis/redis.js'
 const PORT = process.env.PORT || 3001;
 
 //routes
