@@ -14,5 +14,5 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
-  ]
+, "app/_layout.jsx", "app/(modals)/login.jsx", "app/(tabs)/_layout.jsx", "app/(tabs)/inbox.jsx", "app/(tabs)/index.jsx", "app/(tabs)/profile.jsx", "app/(tabs)/notifications.jsx", "app/(tabs)/wishlists.jsx", "constants/Colors.js", "hooks/useWarmUpBrowser.js"  ]
 }
