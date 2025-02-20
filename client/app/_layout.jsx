@@ -1,18 +1,17 @@
 import "../global.css";
-import { useFonts } from "expo-font";
-import { SplashScreen, Stack, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
-import * as SecureStore from "expo-secure-store";
-import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFonts } from 'expo-font';
+import { SplashScreen, Stack, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
+import * as SecureStore from 'expo-secure-store';
+import { Ionicons } from '@expo/vector-icons';
+import { TouchableOpacity, ActivityIndicator, View } from 'react-native';
 
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 if (!CLERK_PUBLISHABLE_KEY) {
   throw new Error(
-    "Missing Clerk Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env"
+    'Missing Clerk Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env'
   );
 }
 
@@ -20,9 +19,9 @@ if (!CLERK_PUBLISHABLE_KEY) {
 const tokenCache = {
   async getToken(key) {
     try {
-      return SecureStore.getItemAsync(key);
+      return await SecureStore.getItemAsync(key);
     } catch (error) {
-      console.error("Error retrieving token:", error);
+      console.error('Error retrieving token:', error);
       return null;
     }
   },
@@ -30,37 +29,35 @@ const tokenCache = {
     try {
       await SecureStore.setItemAsync(key, value);
     } catch (error) {
-      console.error("Error saving token:", error);
+      console.error('Error saving token:', error);
     }
   },
 };
 
-// Prevent splash screen auto-hiding before assets load
+// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    mon: require("../assets/fonts/Montserrat-Regular.ttf"),
-    "mon-sb": require("../assets/fonts/Montserrat-SemiBold.ttf"),
-    "mon-b": require("../assets/fonts/Montserrat-Bold.ttf"),
+  const [fontsLoaded, fontError] = useFonts({
+    mon: require('../assets/fonts/Montserrat-Regular.ttf'),
+    'mon-sb': require('../assets/fonts/Montserrat-SemiBold.ttf'),
+    'mon-b': require('../assets/fonts/Montserrat-Bold.ttf'),
   });
 
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+    if (fontError) {
+      console.error('Font loading error:', fontError);
+    }
+  }, [fontError]);
 
   useEffect(() => {
-    if (loaded) {
+    if (fontsLoaded) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [fontsLoaded]);
 
-  if (!loaded) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#000" />
-      </View>
-    );
+  if (!fontsLoaded) {
+    return null; // or return a loading spinner
   }
 
   return (
@@ -73,63 +70,62 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
-  const [isFirstLaunch, setIsFirstLaunch] = useState(null); // Use `null` to handle loading state
+  const [isReady, setIsReady] = useState(false);
 
+  // Ensure navigation only happens after the component is mounted
   useEffect(() => {
-    const checkOnboarding = async () => {
-      try {
-        const onboarded = await AsyncStorage.getItem("hasOnboarded");
-        console.log("Stored onboarding status:", onboarded); // Debugging log
-
-        if (onboarded === null) {
-          setIsFirstLaunch(true); // If onboarding status is missing, show onboarding
-        } else if (onboarded === "true") {
-          setIsFirstLaunch(false); // User already onboarded
-        } else {
-          // If onboarding status is invalid, remove it
-          console.log("Invalid onboarding data found. Removing...");
-          await AsyncStorage.removeItem("hasOnboarded");
-          setIsFirstLaunch(true);
-        }
-      } catch (error) {
-        console.error("Error checking onboarding status:", error);
-        setIsFirstLaunch(true);
-      }
-    };
-
-    checkOnboarding();
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded || isFirstLaunch === null) return; // Wait until both are ready
-
-    if (!isSignedIn && isFirstLaunch === false) {
-      router.push("/(modals)/login");
+    if (isLoaded) {
+      setIsReady(true);
     }
-  }, [isLoaded, isSignedIn, isFirstLaunch]);
+  }, [isLoaded]);
 
-  if (isFirstLaunch === null) {
+  // Handle navigation based on authentication state
+  useEffect(() => {
+    if (isReady) {
+      if (!isSignedIn) {
+        router.push('/(modals)/login');
+      }
+    }
+  }, [isReady, isSignedIn]);
+
+  if (!isReady) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#000" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
     <Stack>
-      {isFirstLaunch ? (
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-      ) : (
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      )}
       <Stack.Screen
+        name="(tabs)"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
         name="(modals)/login"
         options={{
-          presentation: "modal",
-          title: "Log in or sign up",
+          headerShown: false,
+          presentation: 'modal',
+          title: 'Log in or sign up',
           headerTitleStyle: {
-            fontFamily: "mon-sb",
+            fontFamily: 'mon-sb',
+          },
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="close-outline" size={28} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <Stack.Screen
+        name="(modals)/signup"
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+          title: 'Sign up',
+          headerTitleStyle: {
+            fontFamily: 'mon-sb',
           },
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()}>
